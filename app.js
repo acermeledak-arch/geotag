@@ -1,0 +1,899 @@
+// ===== Global Variables =====
+let map;
+let marker;
+let selectedLocation = null;
+let uploadedImages = []; // Array for multiple images
+let logoImage = null; // Preloaded logo
+
+// ===== Location Data (Tanah Bumbu) =====
+const locationData = {
+    'Batulicin': ['Batulicin', 'Gunung Tinggi', 'Segumbang', 'Kersik Putih', 'Maju Makmur', 'Maju Bersama', 'Sukamaju', 'Polewali Marajae', 'Danau Indah'],
+    'Kusan Hilir': ['Kota Pagatan', 'Betung', 'Sungai Lembu', 'Wirittasi', 'Pejala', 'Pagarruyung', 'Muara Pagatan Tengah', 'Kampung Baru', 'Pasar Baru', 'Batuah', 'Barugelang', 'Pulau Salak', 'Mudalang', 'Tanette', 'Muara Pagatan', 'Pulau Satu', 'Juku Eja', 'Gusunge', 'Rantau Panjang Hulu', 'Penyelongan', 'Beringin', 'Rantau Panjang Hilir'],
+    'Sungai Loban': ['Sari Mulya', 'Sungai Loban', 'Sebamban Lama', 'Sebamban Baru', 'Sungai Dua Laut', 'Marga Mulya', 'Sari Utama', 'Tri Mulya', 'Dwi Marga Utama', 'Kerta Buwana', 'Batu Meranti', 'Tri Martani', 'Sumber Makmur', 'Biduri Bersujud', 'Sumber Sari', 'Wanasari', 'Damar Indah'],
+    'Satui': ['Setarap', 'Satui Timur', 'Sungai Cuka', 'Jombang', 'Satui Barat', 'Sekapuk', 'Sungai Danau', 'Wonorejo', 'Sumber Makmur', 'Tegal Sari', 'Sumber Arum', 'Sejahtera Mulia', 'Al-Kautsar', 'Makmur Mulia', 'Sinar Bulan', 'Pendamaran Jaya', 'Sido Rejo', 'Beruntung Jaya', 'Barakat Mufakat', 'Makmur Jaya'],
+    'Kusan Hulu': ['Lasung', 'Manuntung', 'Anjir Baru', 'Binawara', 'Pacakan', 'Sungai Rukam', 'Bakaranagan', 'Karang Mulya', 'Harapan Jaya', 'Wonorejo', 'Karang Sari'],
+    'Simpang Empat': ['Kampung Baru', 'Tungkaran Pangeran', 'Sarigadung', 'Mekar Sari', 'Sungai Dua', 'Batu Ampar', 'Gunungbesar', 'Pulau Burung', 'Baroqah', 'Bersujud', 'Sejahtera', 'Gunung Antasari', 'Hidayah Makmur', 'Plajau Mulia', 'Kupang Berkah Jaya'],
+    'Karang Bintang': ['Karang Bintang', 'Pandan Sari', 'Rejowinangun', 'Selaselilau', 'Pematang Ulin', 'Batulicin Irigasi', 'Manunggal', 'Sumber Wangi', 'Madu Retno', 'Maju Sejahtera', 'Karang Rejo', 'Karang Nunggal'],
+    'Mantewe': ['Mantewe', 'Dukuh Rejo', 'Rejosari', 'Sukadamai', 'Bulurejo', 'Sidomulyo', 'Sepakat', 'Sari Mulya', 'Emil Baru', 'Mentawakan Mulia', 'Maju Mulyo', 'Gunung Raya'],
+    'Angsana': ['Bunati', 'Purwodadi', 'Sumber Baru', 'Karang Indah', 'Angsana', 'Banjarsari', 'Bayansari', 'Makmur', 'Mekar Jaya'],
+    'Kuranji': ['Giri Mulya', 'Kuranji', 'Waringin Tunggal', 'Mustika', 'Indraloka Jaya', 'Karang Intan', 'Ringkit'],
+    'Kusan Tengah': ['Saring Sungai Bubu', 'Saring Sei Binjai', 'Sepunggur', 'Serdangan', 'Satiung', 'Api-Api', 'Pakatellu', 'Manurung', 'Batarang', 'Mekar Jaya', 'Pulau Tanjung', 'Upt. Karya Bakti', 'Salimuran'],
+    'Teluk Kepayang': ['Teluk Kepayang', 'Guntung', 'Mangkalapi', 'Tibarau Panjang', 'Darasan Binjai', 'Tapus', "Hati'if", 'Batu Bulan', 'Tamunih', 'Dadap Kusan Raya']
+};
+
+// ===== DOM Elements =====
+const photoInput = document.getElementById('photoInput');
+const uploadArea = document.getElementById('uploadArea');
+const photoThumbnails = document.getElementById('photoThumbnails');
+const dateInput = document.getElementById('dateInput');
+const timeInput = document.getElementById('timeInput');
+const locationCoords = document.getElementById('locationCoords');
+const roadInput = document.getElementById('roadInput');
+const districtSelect = document.getElementById('districtSelect');
+const villageSelect = document.getElementById('villageSelect');
+const generateBtn = document.getElementById('generateBtn');
+const resultSection = document.getElementById('resultSection');
+const resultsGrid = document.getElementById('resultsGrid');
+const resultCount = document.getElementById('resultCount');
+
+
+// ===== Initialize =====
+document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    initUpload();
+    initDateTime();
+    initLocationDropdowns();
+    initLightbox();
+    initPassword();
+    initButtons();
+    hidePreloader();
+});
+
+
+
+// ===== Preloader =====
+function hidePreloader() {
+    const preloader = document.getElementById('preloader');
+    const passwordScreen = document.getElementById('passwordScreen');
+
+    // Minimum display time for smooth effect
+    setTimeout(() => {
+        preloader.classList.add('hidden');
+        // Show password screen after preloader
+        passwordScreen.classList.add('active');
+        document.getElementById('passwordInput').focus();
+    }, 1500);
+}
+
+// ===== Password Protection =====
+function initPassword() {
+    const passwordScreen = document.getElementById('passwordScreen');
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordSubmit = document.getElementById('passwordSubmit');
+    const passwordError = document.getElementById('passwordError');
+
+    // Generate today's password (GMT+8 timezone)
+    function getTodayPassword() {
+        // Get current time in GMT+8
+        const now = new Date();
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const gmt8 = new Date(utc + (8 * 60 * 60000)); // GMT+8
+
+        const day = String(gmt8.getDate()).padStart(2, '0');
+        const month = String(gmt8.getMonth() + 1).padStart(2, '0');
+        const year = String(gmt8.getFullYear()).slice(-2);
+
+        // If date is odd: YYMMDD, if even: DDMMYY
+        if (gmt8.getDate() % 2 === 1) {
+            return year + month + day; // Odd: YYMMDD
+        } else {
+
+            return day + month + year; // Even: DDMMYY
+        }
+    }
+
+    function validatePassword() {
+        const entered = passwordInput.value;
+        const correct = getTodayPassword();
+
+        if (entered === correct) {
+            passwordScreen.classList.remove('active');
+            passwordError.textContent = '';
+        } else {
+            passwordError.textContent = '❌ Password salah!';
+            passwordInput.classList.add('error');
+            setTimeout(() => passwordInput.classList.remove('error'), 300);
+            passwordInput.value = '';
+            passwordInput.focus();
+        }
+    }
+
+    // Submit on button click
+    passwordSubmit.addEventListener('click', validatePassword);
+
+    // Submit on Enter key
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            validatePassword();
+        }
+    });
+}
+
+
+// ===== Lightbox =====
+function initLightbox() {
+    const lightbox = document.getElementById('lightbox');
+    const lightboxClose = document.getElementById('lightboxClose');
+
+    // Close on button click
+    lightboxClose.addEventListener('click', () => {
+        lightbox.classList.remove('active');
+    });
+
+    // Close on background click
+    lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) {
+            lightbox.classList.remove('active');
+        }
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && lightbox.classList.contains('active')) {
+            lightbox.classList.remove('active');
+        }
+    });
+}
+
+
+
+// ===== Location Dropdowns =====
+function initLocationDropdowns() {
+    // Populate kecamatan dropdown
+    Object.keys(locationData).forEach(kecamatan => {
+        const option = document.createElement('option');
+        option.value = kecamatan;
+        option.textContent = kecamatan;
+        districtSelect.appendChild(option);
+    });
+
+    // Handle kecamatan change
+    districtSelect.addEventListener('change', () => {
+        const selectedKecamatan = districtSelect.value;
+
+        // Reset village dropdown
+        villageSelect.innerHTML = '<option value="">-- Pilih Desa --</option>';
+
+        if (selectedKecamatan && locationData[selectedKecamatan]) {
+            villageSelect.disabled = false;
+            locationData[selectedKecamatan].forEach(desa => {
+                const option = document.createElement('option');
+                option.value = desa;
+                option.textContent = desa;
+                villageSelect.appendChild(option);
+            });
+        } else {
+            villageSelect.disabled = true;
+            villageSelect.innerHTML = '<option value="">-- Pilih Kecamatan dulu --</option>';
+        }
+    });
+}
+
+
+// ===== Map Initialization =====
+function initMap() {
+    // Center on Indonesia
+    map = L.map('map').setView([-2.5, 118], 5);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Click handler
+    map.on('click', async (e) => {
+        const { lat, lng } = e.latlng;
+
+        // Remove existing marker
+        if (marker) {
+            map.removeLayer(marker);
+        }
+
+        // Add new marker
+        marker = L.marker([lat, lng]).addTo(map);
+
+        // Set location from map click
+        setLocationFromMap(lat, lng);
+
+        checkFormValidity();
+    });
+}
+
+// ===== Set Location from Map Click =====
+function setLocationFromMap(lat, lng) {
+    selectedLocation = {
+        lat: lat,
+        lng: lng
+    };
+
+    // Display coordinates
+    locationCoords.innerHTML = `
+        <div class="coords-display">
+            <span class="coords-icon">📍</span>
+            <span class="coords-text">${lat.toFixed(6)}, ${lng.toFixed(6)}</span>
+        </div>
+    `;
+}
+
+
+// ===== Photo Upload =====
+function initUpload() {
+    uploadArea.addEventListener('click', () => photoInput.click());
+
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'var(--primary)';
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+        uploadArea.style.borderColor = '';
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.borderColor = '';
+
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        handleMultipleImages(files);
+    });
+
+    photoInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        handleMultipleImages(files);
+    });
+
+    // Preload logo image
+    logoImage = new Image();
+    logoImage.src = 'stamped.png';
+}
+
+function handleMultipleImages(files) {
+    files.forEach(file => {
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                uploadedImages.push({
+                    file: file,
+                    image: img,
+                    dataUrl: e.target.result
+                });
+                renderThumbnails();
+                checkFormValidity();
+            };
+            img.src = e.target.result;
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
+function renderThumbnails() {
+    photoThumbnails.innerHTML = '';
+
+    uploadedImages.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'thumbnail-item';
+        div.innerHTML = `
+            <img src="${item.dataUrl}" alt="Photo ${index + 1}">
+            <button class="remove-btn" data-index="${index}">×</button>
+        `;
+        photoThumbnails.appendChild(div);
+    });
+
+    // Add remove handlers
+    photoThumbnails.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const idx = parseInt(btn.dataset.index);
+            uploadedImages.splice(idx, 1);
+            renderThumbnails();
+            checkFormValidity();
+        });
+    });
+}
+
+
+// ===== Date & Time =====
+function initDateTime() {
+    const now = new Date();
+
+    // Set default date
+    dateInput.value = now.toISOString().split('T')[0];
+
+    // Set default time
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    timeInput.value = `${hours}:${minutes}:${seconds}`;
+
+    dateInput.addEventListener('change', checkFormValidity);
+    timeInput.addEventListener('change', checkFormValidity);
+}
+
+// ===== Form Validation =====
+function checkFormValidity() {
+    const isValid = uploadedImages.length > 0 &&
+        selectedLocation &&
+        dateInput.value &&
+        timeInput.value;
+
+    generateBtn.disabled = !isValid;
+}
+
+// ===== Buttons =====
+function initButtons() {
+    generateBtn.addEventListener('click', generateAllStampedPhotos);
+}
+
+// ===== Generate All Stamped Photos =====
+async function generateAllStampedPhotos() {
+    if (uploadedImages.length === 0 || !selectedLocation) return;
+
+    generateBtn.textContent = '⏳ Generating...';
+    generateBtn.disabled = true;
+
+    // Clear previous results
+    resultsGrid.innerHTML = '';
+
+    // Process each image
+    for (let i = 0; i < uploadedImages.length; i++) {
+        const item = uploadedImages[i];
+        await generateSingleStamp(item, i);
+    }
+
+    // Update count and show results
+    resultCount.textContent = uploadedImages.length;
+    resultSection.classList.add('visible');
+    resultSection.scrollIntoView({ behavior: 'smooth' });
+
+    generateBtn.textContent = '🖼️ Generate Stamp';
+    generateBtn.disabled = false;
+}
+
+// ===== Generate Single Stamp =====
+async function generateSingleStamp(item, index) {
+    // Small delay for UI feedback
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas size to match image
+    canvas.width = item.image.width;
+    canvas.height = item.image.height;
+
+    // Draw original image
+    ctx.drawImage(item.image, 0, 0);
+
+    // Calculate scale factor based on image size
+    const scaleFactor = Math.min(canvas.width, canvas.height) / 800;
+
+    // Generate random values once to share between compass and text
+    const randomData = {
+        degree: Math.floor(Math.random() * 360),
+        altitude: (Math.random() * 90 + 10).toFixed(1),
+        speed: (Math.random() * 5).toFixed(1)
+    };
+
+    // Draw compass with rotation
+    drawCompass(ctx, scaleFactor, randomData.degree);
+
+    // Draw mini map
+    await drawMiniMap(ctx, canvas, scaleFactor);
+
+    // Draw text info
+    drawTextInfo(ctx, canvas, scaleFactor, randomData);
+
+    // Draw logo (bottom left, above the map)
+    drawLogo(ctx, canvas, scaleFactor);
+
+    // Create result item
+    const resultItem = document.createElement('div');
+    resultItem.className = 'result-item';
+
+    const fileName = item.file.name.replace(/\.[^/.]+$/, '') + '_stamped.jpg';
+
+    resultItem.innerHTML = `
+        <button class="btn-download" data-filename="${fileName}">⬇️ Download</button>
+    `;
+
+    // Insert canvas before button
+    resultItem.insertBefore(canvas, resultItem.firstChild);
+
+    // Add download handler
+    resultItem.querySelector('.btn-download').addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
+        link.click();
+    });
+
+    // Add lightbox click handler on canvas
+    canvas.addEventListener('click', () => {
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImage = document.getElementById('lightboxImage');
+        lightboxImage.src = canvas.toDataURL('image/jpeg', 0.95);
+        lightbox.classList.add('active');
+    });
+
+    resultsGrid.appendChild(resultItem);
+}
+
+
+// ===== Draw Logo =====
+function drawLogo(ctx, canvas, scale) {
+    if (!logoImage || !logoImage.complete) return;
+
+    const logoSize = 36 * scale; // Logo inside map
+    const mapWidth = 305 * scale;
+    const mapHeight = 235 * scale;
+    const mapX = 10 * scale;
+    const mapY = canvas.height - mapHeight - 10 * scale;
+
+    // Position: inside mini map, bottom left corner with small padding
+    const logoPadding = 5 * scale;
+    const x = mapX + logoPadding;
+    const y = mapY + mapHeight - logoSize - logoPadding;
+
+    // Draw logo with aspect ratio maintained
+    const aspectRatio = logoImage.width / logoImage.height;
+    let drawWidth = logoSize * aspectRatio;
+    let drawHeight = logoSize;
+
+    ctx.drawImage(logoImage, x, y, drawWidth, drawHeight);
+}
+
+
+
+
+// ===== Draw Compass =====
+function drawCompass(ctx, scale, degree) {
+    const size = 196 * scale; // Compass size
+    const x = 20 * scale + size / 2;
+    const y = 20 * scale + size / 2;
+    const radius = size / 2;
+
+    ctx.save();
+    ctx.globalAlpha = 0.85; // 85% opacity
+
+    // Outer circle (dark with transparency)
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(50, 50, 50, 0.7)';
+    ctx.fill();
+
+    // Circle border
+    ctx.beginPath();
+    ctx.arc(x, y, radius - 2 * scale, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(150, 150, 150, 0.8)';
+    ctx.lineWidth = 3 * scale;
+    ctx.stroke();
+
+    // Direction letters
+    ctx.font = `bold ${16 * scale}px Arial`;
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // N, S, E, W positions
+    ctx.fillText('N', x, y - radius + 20 * scale);
+    ctx.fillText('S', x, y + radius - 20 * scale);
+    ctx.fillText('E', x + radius - 20 * scale, y);
+    ctx.fillText('W', x - radius + 20 * scale, y);
+
+    // Compass needle - rotated based on degree
+    const needleLength = radius * 0.55;
+    const rotation = (degree * Math.PI) / 180; // Convert degree to radians
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+
+    // North pointer (cyan/blue)
+    ctx.beginPath();
+    ctx.moveTo(0, -needleLength);
+    ctx.lineTo(-10 * scale, 0);
+    ctx.lineTo(10 * scale, 0);
+    ctx.closePath();
+    ctx.fillStyle = '#00bcd4';
+    ctx.fill();
+
+    // South pointer (dark)
+    ctx.beginPath();
+    ctx.moveTo(0, needleLength);
+    ctx.lineTo(-10 * scale, 0);
+    ctx.lineTo(10 * scale, 0);
+    ctx.closePath();
+    ctx.fillStyle = '#37474f';
+    ctx.fill();
+
+    ctx.restore();
+
+    // Center circle
+    ctx.beginPath();
+    ctx.arc(x, y, 6 * scale, 0, Math.PI * 2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+
+    ctx.restore();
+}
+
+
+// ===== Draw Mini Map =====
+async function drawMiniMap(ctx, canvas, scale) {
+    const mapWidth = 305 * scale;
+    const mapHeight = 235 * scale;
+    const x = 10 * scale;
+    const y = canvas.height - mapHeight - 10 * scale;
+
+    const lat = selectedLocation.lat;
+    const lng = selectedLocation.lng;
+
+    // Try zoom 19 first, fallback to 18 if tiles fail
+    let zoom = 19;
+    let success = await tryDrawMapTiles(ctx, x, y, mapWidth, mapHeight, lat, lng, zoom, scale);
+
+    if (!success) {
+        console.log('Zoom 19 failed, falling back to zoom 18');
+        zoom = 18;
+        success = await tryDrawMapTiles(ctx, x, y, mapWidth, mapHeight, lat, lng, zoom, scale);
+    }
+
+    if (!success) {
+        drawFallbackMap(ctx, x, y, mapWidth, mapHeight, scale);
+    }
+}
+
+// Try to draw map tiles at specific zoom level
+async function tryDrawMapTiles(ctx, x, y, mapWidth, mapHeight, lat, lng, zoom, scale) {
+    try {
+        // Create an offscreen canvas for the map
+        const mapCanvas = document.createElement('canvas');
+        mapCanvas.width = Math.round(mapWidth);
+        mapCanvas.height = Math.round(mapHeight);
+        const mapCtx = mapCanvas.getContext('2d');
+
+        // Calculate tile coordinates
+        const tileSize = 256;
+
+        // Get the exact tile coordinates (with fractions)
+        const exactTileX = lonToTile(lng, zoom);
+        const exactTileY = latToTile(lat, zoom);
+
+        // Integer tile coordinates
+        const centerTileX = Math.floor(exactTileX);
+        const centerTileY = Math.floor(exactTileY);
+
+        // Pixel offset within the center tile (where the marker should be)
+        const offsetX = (exactTileX - centerTileX) * tileSize;
+        const offsetY = (exactTileY - centerTileY) * tileSize;
+
+        // Calculate where to place the center tile so the marker ends up in the middle
+        const centerTilePosX = mapWidth / 2 - offsetX;
+        const centerTilePosY = mapHeight / 2 - offsetY;
+
+        // How many tiles we need on each side
+        const tilesLeft = Math.ceil(centerTilePosX / tileSize) + 1;
+        const tilesRight = Math.ceil((mapWidth - centerTilePosX) / tileSize) + 1;
+        const tilesTop = Math.ceil(centerTilePosY / tileSize) + 1;
+        const tilesBottom = Math.ceil((mapHeight - centerTilePosY) / tileSize) + 1;
+
+        // Load and draw tiles
+        let failedTiles = 0;
+        let totalTiles = 0;
+        const tilePromises = [];
+
+        for (let ty = -tilesTop; ty < tilesBottom; ty++) {
+            for (let tx = -tilesLeft; tx < tilesRight; tx++) {
+                const tileX = centerTileX + tx;
+                const tileY = centerTileY + ty;
+
+                // Calculate position on map canvas
+                const posX = centerTilePosX + tx * tileSize;
+                const posY = centerTilePosY + ty * tileSize;
+
+                // Skip if completely outside canvas
+                if (posX + tileSize < 0 || posX > mapWidth ||
+                    posY + tileSize < 0 || posY > mapHeight) {
+                    continue;
+                }
+
+                totalTiles++;
+
+                // Use multiple tile servers
+                const servers = ['a', 'b', 'c'];
+                const server = servers[Math.abs(tileX + tileY) % 3];
+                const tileUrl = `https://${server}.tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`;
+
+                tilePromises.push(
+                    loadTileImage(tileUrl).then(img => {
+                        mapCtx.drawImage(img, posX, posY, tileSize, tileSize);
+                    }).catch(() => {
+                        failedTiles++;
+                        mapCtx.fillStyle = '#e0e0e0';
+                        mapCtx.fillRect(posX, posY, tileSize, tileSize);
+                    })
+                );
+            }
+        }
+
+        await Promise.all(tilePromises);
+
+        // If more than 50% tiles failed, consider it a failure
+        if (failedTiles > totalTiles * 0.5) {
+            return false;
+        }
+
+        // Draw marker at center
+        drawMapMarker(mapCtx, mapWidth / 2, mapHeight / 2, scale);
+
+        // Draw the map canvas onto main canvas with rounded corners and opacity
+        ctx.save();
+        ctx.globalAlpha = 0.9; // 90% opacity
+        roundedRect(ctx, x, y, mapWidth, mapHeight, 8 * scale);
+        ctx.clip();
+        ctx.drawImage(mapCanvas, x, y);
+        ctx.restore();
+
+        // Map border
+        ctx.save();
+        roundedRect(ctx, x, y, mapWidth, mapHeight, 8 * scale);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2 * scale;
+        ctx.stroke();
+        ctx.restore();
+
+        return true;
+
+    } catch (error) {
+        console.error('Failed to load map at zoom ' + zoom + ':', error);
+        return false;
+    }
+}
+
+
+// Convert longitude to tile X
+function lonToTile(lon, zoom) {
+    return ((lon + 180) / 360) * Math.pow(2, zoom);
+}
+
+// Convert latitude to tile Y
+function latToTile(lat, zoom) {
+    const latRad = lat * Math.PI / 180;
+    return (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2, zoom);
+}
+
+// Load tile with timeout
+function loadTileImage(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        const timeout = setTimeout(() => {
+            reject(new Error('Timeout'));
+        }, 5000);
+
+        img.onload = () => {
+            clearTimeout(timeout);
+            resolve(img);
+        };
+        img.onerror = () => {
+            clearTimeout(timeout);
+            reject(new Error('Failed to load'));
+        };
+        img.src = url;
+    });
+}
+
+// Draw red marker pin
+function drawMapMarker(ctx, x, y, scale) {
+    const markerHeight = 30;
+    const markerWidth = 20;
+
+    ctx.save();
+
+    // Shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    // Marker pin shape
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.bezierCurveTo(
+        x - markerWidth / 2, y - markerHeight * 0.6,
+        x - markerWidth / 2, y - markerHeight,
+        x, y - markerHeight
+    );
+    ctx.bezierCurveTo(
+        x + markerWidth / 2, y - markerHeight,
+        x + markerWidth / 2, y - markerHeight * 0.6,
+        x, y
+    );
+    ctx.closePath();
+
+    // Red fill
+    ctx.fillStyle = '#e53935';
+    ctx.fill();
+
+    // White circle inside
+    ctx.beginPath();
+    ctx.arc(x, y - markerHeight * 0.65, markerWidth / 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'white';
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// Fallback when map tiles fail
+function drawFallbackMap(ctx, x, y, width, height, scale) {
+    ctx.save();
+
+    // Background
+    roundedRect(ctx, x, y, width, height, 8 * scale);
+    ctx.fillStyle = '#d4e5d4';
+    ctx.fill();
+
+    // Grid lines to simulate map
+    ctx.strokeStyle = '#c0d4c0';
+    ctx.lineWidth = 1;
+    const gridSize = 20 * scale;
+
+    for (let gx = x; gx < x + width; gx += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(gx, y);
+        ctx.lineTo(gx, y + height);
+        ctx.stroke();
+    }
+    for (let gy = y; gy < y + height; gy += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, gy);
+        ctx.lineTo(x + width, gy);
+        ctx.stroke();
+    }
+
+    // Draw marker at center
+    drawMapMarker(ctx, x + width / 2, y + height / 2 + 15 * scale, scale);
+
+    // Border
+    roundedRect(ctx, x, y, width, height, 8 * scale);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 2 * scale;
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+
+function roundedRect(ctx, x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+// ===== Draw Text Info =====
+function drawTextInfo(ctx, canvas, scale, randomData) {
+    const padding = 20 * scale;
+    const lineHeight = 34 * scale; // Line height +20%
+    const fontSize = 26 * scale; // Font size +20%
+    const x = canvas.width - padding;
+    let y = canvas.height - padding;
+
+    ctx.save();
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+
+    // Add text shadow for readability
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 4 * scale;
+    ctx.shadowOffsetX = 1 * scale;
+    ctx.shadowOffsetY = 1 * scale;
+
+    // Build text lines (bottom to top, so we push in reverse order of display)
+    const lines = [];
+
+    // Speed (bottom-most)
+    lines.push(`Speed:${randomData.speed}km/h`);
+
+    // Altitude
+    lines.push(`Altitude:${randomData.altitude}msnm`);
+
+    // Province (hardcoded)
+    lines.push('Kalimantan Selatan');
+
+    // Regency/Kabupaten (hardcoded)
+    lines.push('Tanah Bumbu');
+
+
+    // District/Kecamatan (from dropdown)
+    if (districtSelect.value) {
+        lines.push(districtSelect.value);
+    }
+
+    // Village/Desa (from dropdown)
+    if (villageSelect.value) {
+        lines.push(villageSelect.value);
+    }
+
+
+    // Road (from manual input)
+    if (roadInput.value.trim()) {
+        lines.push(roadInput.value.trim());
+    }
+
+    // Compass direction (using shared random degree)
+    const cardinalDir = getCardinalDirection(randomData.degree);
+    lines.push(`${randomData.degree}° ${cardinalDir}`);
+
+    // Coordinates
+    if (selectedLocation) {
+        lines.push(`${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}`);
+    }
+
+    // Date & Time (top-most)
+    const dateStr = formatDate(dateInput.value);
+    const timeStr = timeInput.value;
+    lines.push(`${dateStr} ${timeStr}`);
+
+
+    // Draw lines from bottom to top
+    lines.forEach((line, index) => {
+        ctx.fillText(line, x, y - (index * lineHeight));
+    });
+
+    ctx.restore();
+}
+
+
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+
+    return `${month} ${day}, ${year}`;
+}
+
+// Get cardinal direction from degrees
+function getCardinalDirection(degrees) {
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const index = Math.round(degrees / 45) % 8;
+    return directions[index];
+}
+
+
+// ===== Download Photo =====
+function downloadPhoto() {
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.download = `geotag-photo-${timestamp}.jpg`;
+    link.href = resultCanvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+}

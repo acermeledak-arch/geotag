@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geo Tag Custom - PAGPIC EDUTECH</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Preloader -->
+    <div class="preloader" id="preloader">
+        <div class="preloader-content">
+            <img src="logo_preloader.png" alt="PAGPIC EDUTECH" class="preloader-logo">
+            <div class="preloader-spinner"></div>
+            <p class="preloader-text">Memuat aplikasi...</p>
+        </div>
+    </div>
+
+    <!-- Password Screen -->
+    <div class="password-screen" id="passwordScreen">
+        <div class="password-content">
+            <img src="logo_preloader.png" alt="PAGPIC EDUTECH" class="password-logo">
+            <h2>🔐 Masukkan Password</h2>
+            <p class="password-hint">Masukkan kode akses untuk melanjutkan</p>
+            <input type="password" id="passwordInput" class="password-input" placeholder="••••••" maxlength="6">
+            <button class="password-submit" id="passwordSubmit">Masuk</button>
+            <p class="password-error" id="passwordError"></p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>📍 Geo Tag Custom</h1>
+            <p>By PAGPIC EDUTECH</p>
+        </header>
+
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Panel - Form -->
+            <section class="panel form-panel">
+                <h2>📝 Input Data</h2>
+
+                <!-- Photo Upload (Multiple) -->
+                <div class="form-group">
+                    <label for="photoInput">Upload Foto (bisa pilih banyak)</label>
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" id="photoInput" accept="image/*" multiple hidden>
+                        <div class="upload-placeholder">
+                            <span class="upload-icon">📷</span>
+                            <span>Klik atau drag foto ke sini</span>
+                        </div>
+                    </div>
+                    <div class="photo-thumbnails" id="photoThumbnails"></div>
+                </div>
+
+
+                <!-- Date & Time -->
+                <div class="form-group">
+                    <label for="dateInput">Tanggal</label>
+                    <input type="date" id="dateInput">
+                </div>
+                <div class="form-group">
+                    <label for="timeInput">Waktu</label>
+                    <input type="time" id="timeInput" step="1">
+                </div>
+
+                <!-- Location Input (Manual) -->
+                <div class="form-group">
+                    <label>Lokasi (pilih titik dari peta →)</label>
+                    <div class="location-coords" id="locationCoords">
+                        <p class="placeholder-text">Klik pada peta untuk memilih titik koordinat</p>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="districtSelect">Kecamatan</label>
+                    <select id="districtSelect">
+                        <option value="">-- Pilih Kecamatan --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="villageSelect">Desa/Kelurahan</label>
+                    <select id="villageSelect" disabled>
+                        <option value="">-- Pilih Kecamatan dulu --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="roadInput">Nama Jalan</label>
+                    <input type="text" id="roadInput" placeholder="Contoh: Jl. Cempaka 2 (optional)">
+                </div>
+
+
+
+                <!-- Generate Button -->
+                <button class="btn-generate" id="generateBtn" disabled>
+                    🖼️ Generate Stamp
+                </button>
+            </section>
+
+            <!-- Right Panel - Map & Results -->
+            <section class="panel map-panel">
+                <h2>🗺️ Pilih Lokasi</h2>
+                <div id="map"></div>
+                <p class="map-hint">Klik pada peta untuk menentukan titik lokasi</p>
+
+                <!-- Result Section (inside map panel) -->
+                <div class="result-section" id="resultSection">
+                    <h3>📸 Hasil (<span id="resultCount">0</span> foto)</h3>
+                    <div class="results-grid" id="resultsGrid"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="lightboxClose">×</button>
+            <img id="lightboxImage" src="" alt="Preview">
+        </div>
+    </div>
+
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
