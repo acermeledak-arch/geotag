@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 36" width="60" height="36">
+  <defs>
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="1.5" dy="1.5" stdDeviation="1.2" flood-opacity="0.35"/>
+    </filter>
+    
+    <!-- Glossy gradient overlay -->
+    <linearGradient id="glossy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:white;stop-opacity:0.35"/>
+      <stop offset="40%" style="stop-color:white;stop-opacity:0.1"/>
+      <stop offset="60%" style="stop-color:black;stop-opacity:0.05"/>
+      <stop offset="100%" style="stop-color:black;stop-opacity:0.15"/>
+    </linearGradient>
+    
+    <!-- Wave shading for 3D effect -->
+    <linearGradient id="waveShade" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:white;stop-opacity:0.1"/>
+      <stop offset="30%" style="stop-color:black;stop-opacity:0.1"/>
+      <stop offset="70%" style="stop-color:white;stop-opacity:0.1"/>
+      <stop offset="100%" style="stop-color:black;stop-opacity:0.05"/>
+    </linearGradient>
+  </defs>
+  
+  <g filter="url(#shadow)">
+    <!-- S-curve Red top half -->
+    <path d="M0,6 
+             C15,0 30,12 45,6
+             C52,3 57,4 60,6
+             L60,18
+             C45,24 30,12 15,18
+             C8,21 3,20 0,18
+             Z" 
+          fill="#E80000"/>
+    
+    <!-- S-curve White bottom half (symmetric) -->
+    <path d="M0,18 
+             C3,20 8,21 15,18
+             C30,12 45,24 60,18
+             L60,30
+             C57,32 52,33 45,30
+             C30,24 15,36 0,30
+             Z" 
+          fill="#FFFFFF"/>
+    
+    <!-- Glossy overlay -->
+    <path d="M0,6 
+             C15,0 30,12 45,6
+             C52,3 57,4 60,6
+             L60,30
+             C57,32 52,33 45,30
+             C30,24 15,36 0,30
+             Z" 
+          fill="url(#glossy)"/>
+    
+    <!-- Wave shading for depth -->
+    <path d="M0,6 
+             C15,0 30,12 45,6
+             C52,3 57,4 60,6
+             L60,30
+             C57,32 52,33 45,30
+             C30,24 15,36 0,30
+             Z" 
+          fill="url(#waveShade)"/>
+    
+    <!-- Subtle border -->
+    <path d="M0,6 
+             C15,0 30,12 45,6
+             C52,3 57,4 60,6
+             L60,30
+             C57,32 52,33 45,30
+             C30,24 15,36 0,30
+             Z" 
+          fill="none" 
+          stroke="rgba(0,0,0,0.2)" 
+          stroke-width="0.6"/>
+  </g>
+</svg>

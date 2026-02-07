@@ -3,7 +3,10 @@ let map;
 let marker;
 let selectedLocation = null;
 let uploadedImages = []; // Array for multiple images
-let logoImage = null; // Preloaded logo
+let logoImage = null; // Preloaded logo for original style
+let gpsLogoImage = null; // Preloaded logo for GPS Map Camera style
+let indonesiaFlagImage = null; // Indonesia flag SVG
+let selectedStyle = 'original'; // 'original' or 'gps-camera'
 
 // ===== Location Data (Tanah Bumbu) =====
 const locationData = {
@@ -45,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initLocationDropdowns();
     initLightbox();
     initPassword();
+    initStyleSelection();
     initButtons();
     hidePreloader();
 });
@@ -99,6 +103,8 @@ function initPassword() {
         if (entered === correct) {
             passwordScreen.classList.remove('active');
             passwordError.textContent = '';
+            // Show style selection instead of main app
+            document.getElementById('styleSelection').classList.add('active');
         } else {
             passwordError.textContent = '❌ Password salah!';
             passwordInput.classList.add('error');
@@ -116,6 +122,20 @@ function initPassword() {
         if (e.key === 'Enter') {
             validatePassword();
         }
+    });
+}
+
+// ===== Style Selection =====
+function initStyleSelection() {
+    const styleSelection = document.getElementById('styleSelection');
+    const styleCards = document.querySelectorAll('.style-card');
+
+    styleCards.forEach(card => {
+        card.addEventListener('click', () => {
+            selectedStyle = card.dataset.style;
+            styleSelection.classList.remove('active');
+            // Road input is now always enabled for all styles
+        });
     });
 }
 
@@ -155,6 +175,19 @@ function initLocationDropdowns() {
         option.value = kecamatan;
         option.textContent = kecamatan;
         districtSelect.appendChild(option);
+    });
+
+    // Handle kecamatan change
+    // Auto capitalize each word for road name input
+    roadInput.addEventListener('input', (e) => {
+        const cursorPosition = e.target.selectionStart;
+        const words = e.target.value.split(' ');
+        const capitalizedWords = words.map(word => {
+            if (word.length === 0) return word;
+            return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        });
+        e.target.value = capitalizedWords.join(' ');
+        e.target.setSelectionRange(cursorPosition, cursorPosition);
     });
 
     // Handle kecamatan change
@@ -252,9 +285,15 @@ function initUpload() {
         handleMultipleImages(files);
     });
 
-    // Preload logo image
+    // Preload logo images
     logoImage = new Image();
     logoImage.src = 'stamped.png';
+
+    gpsLogoImage = new Image();
+    gpsLogoImage.src = 'logo_stamped.png';
+
+    indonesiaFlagImage = new Image();
+    indonesiaFlagImage.src = 'Indonesian.png';
 }
 
 function handleMultipleImages(files) {
@@ -387,17 +426,18 @@ async function generateSingleStamp(item, index) {
         speed: (Math.random() * 5).toFixed(1)
     };
 
-    // Draw compass with rotation
-    drawCompass(ctx, scaleFactor, randomData.degree);
-
-    // Draw mini map
-    await drawMiniMap(ctx, canvas, scaleFactor);
-
-    // Draw text info
-    drawTextInfo(ctx, canvas, scaleFactor, randomData);
-
-    // Draw logo (bottom left, above the map)
-    drawLogo(ctx, canvas, scaleFactor);
+    // Route to appropriate stamp style
+    if (selectedStyle === 'gps-camera') {
+        // GPS Map Camera Style
+        await drawSatelliteMap(ctx, canvas, scaleFactor);
+        drawGPSInfoBox(ctx, canvas, scaleFactor, randomData);
+    } else {
+        // Original Style
+        drawCompass(ctx, scaleFactor, randomData.degree);
+        await drawMiniMap(ctx, canvas, scaleFactor);
+        drawTextInfo(ctx, canvas, scaleFactor, randomData);
+        drawLogo(ctx, canvas, scaleFactor);
+    }
 
     // Create result item
     const resultItem = document.createElement('div');
@@ -414,18 +454,27 @@ async function generateSingleStamp(item, index) {
 
     // Add download handler
     resultItem.querySelector('.btn-download').addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.download = fileName;
-        link.href = canvas.toDataURL('image/jpeg', 0.95);
-        link.click();
+        try {
+            const link = document.createElement('a');
+            link.download = fileName;
+            link.href = canvas.toDataURL('image/jpeg', 0.95);
+            link.click();
+        } catch (e) {
+            alert('Tidak bisa download: Jalankan aplikasi melalui local server (bukan file://).\n\nGunakan Live Server extension di VS Code atau jalankan: npx serve');
+            console.error('Canvas export error:', e);
+        }
     });
 
     // Add lightbox click handler on canvas
     canvas.addEventListener('click', () => {
-        const lightbox = document.getElementById('lightbox');
-        const lightboxImage = document.getElementById('lightboxImage');
-        lightboxImage.src = canvas.toDataURL('image/jpeg', 0.95);
-        lightbox.classList.add('active');
+        try {
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImage = document.getElementById('lightboxImage');
+            lightboxImage.src = canvas.toDataURL('image/jpeg', 0.95);
+            lightbox.classList.add('active');
+        } catch (e) {
+            console.error('Canvas preview error:', e);
+        }
     });
 
     resultsGrid.appendChild(resultItem);
@@ -439,8 +488,8 @@ function drawLogo(ctx, canvas, scale) {
     const logoSize = 36 * scale; // Logo inside map
     const mapWidth = 305 * scale;
     const mapHeight = 235 * scale;
-    const mapX = 10 * scale;
-    const mapY = canvas.height - mapHeight - 10 * scale;
+    const mapX = 25 * scale;  // Shifted right (was 10)
+    const mapY = canvas.height - mapHeight - 25 * scale;  // Shifted up (was 10)
 
     // Position: inside mini map, bottom left corner with small padding
     const logoPadding = 5 * scale;
@@ -535,8 +584,8 @@ function drawCompass(ctx, scale, degree) {
 async function drawMiniMap(ctx, canvas, scale) {
     const mapWidth = 305 * scale;
     const mapHeight = 235 * scale;
-    const x = 10 * scale;
-    const y = canvas.height - mapHeight - 10 * scale;
+    const x = 25 * scale;  // Shifted right (was 10)
+    const y = canvas.height - mapHeight - 25 * scale;  // Shifted up (was 10)
 
     const lat = selectedLocation.lat;
     const lng = selectedLocation.lng;
@@ -565,8 +614,9 @@ async function tryDrawMapTiles(ctx, x, y, mapWidth, mapHeight, lat, lng, zoom, s
         mapCanvas.height = Math.round(mapHeight);
         const mapCtx = mapCanvas.getContext('2d');
 
-        // Calculate tile coordinates
-        const tileSize = 256;
+        // Calculate tile coordinates with scale factor for consistent zoom
+        const baseTileSize = 256;
+        const tileSize = baseTileSize * scale * 0.2;  // Reduced zoom (0.2x)
 
         // Get the exact tile coordinates (with fractions)
         const exactTileX = lonToTile(lng, zoom);
@@ -699,8 +749,8 @@ function loadTileImage(url) {
 
 // Draw red marker pin
 function drawMapMarker(ctx, x, y, scale) {
-    const markerHeight = 30;
-    const markerWidth = 20;
+    const markerHeight = 30 * scale;  // Base size scaled
+    const markerWidth = 20 * scale;   // Base size scaled
 
     ctx.save();
 
@@ -729,10 +779,10 @@ function drawMapMarker(ctx, x, y, scale) {
     ctx.fillStyle = '#e53935';
     ctx.fill();
 
-    // White circle inside
+    // Dark red circle inside
     ctx.beginPath();
     ctx.arc(x, y - markerHeight * 0.65, markerWidth / 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = '#8B0000';  // Dark red
     ctx.fill();
 
     ctx.restore();
@@ -792,7 +842,54 @@ function roundedRect(ctx, x, y, width, height, radius) {
     ctx.closePath();
 }
 
-// ===== Draw Text Info =====
+// Rounded rect with selective corners: corners = {tl, tr, br, bl} (true = rounded, false = square)
+function roundedRectSelective(ctx, x, y, width, height, radius, corners) {
+    const tl = corners.tl ? radius : 0;
+    const tr = corners.tr ? radius : 0;
+    const br = corners.br ? radius : 0;
+    const bl = corners.bl ? radius : 0;
+
+    ctx.beginPath();
+    ctx.moveTo(x + tl, y);
+    ctx.lineTo(x + width - tr, y);
+    if (tr) ctx.quadraticCurveTo(x + width, y, x + width, y + tr);
+    else ctx.lineTo(x + width, y);
+    ctx.lineTo(x + width, y + height - br);
+    if (br) ctx.quadraticCurveTo(x + width, y + height, x + width - br, y + height);
+    else ctx.lineTo(x + width, y + height);
+    ctx.lineTo(x + bl, y + height);
+    if (bl) ctx.quadraticCurveTo(x, y + height, x, y + height - bl);
+    else ctx.lineTo(x, y + height);
+    ctx.lineTo(x, y + tl);
+    if (tl) ctx.quadraticCurveTo(x, y, x + tl, y);
+    else ctx.lineTo(x, y);
+    ctx.closePath();
+}
+
+// Wrap text to fit within maxWidth, returns array of lines
+function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+
+    for (const word of words) {
+        const testLine = currentLine ? currentLine + ' ' + word : word;
+        const metrics = ctx.measureText(testLine);
+
+        if (metrics.width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+        } else {
+            currentLine = testLine;
+        }
+    }
+
+    if (currentLine) {
+        lines.push(currentLine);
+    }
+
+    return lines;
+}
 function drawTextInfo(ctx, canvas, scale, randomData) {
     const padding = 20 * scale;
     const lineHeight = 34 * scale; // Line height +20%
@@ -822,20 +919,24 @@ function drawTextInfo(ctx, canvas, scale, randomData) {
     lines.push(`Altitude:${randomData.altitude}msnm`);
 
     // Province (hardcoded)
-    lines.push('Kalimantan Selatan');
+    lines.push('Provinsi Kalimantan Selatan');
 
     // Regency/Kabupaten (hardcoded)
-    lines.push('Tanah Bumbu');
+    lines.push('Kabupaten Tanah Bumbu');
 
 
     // District/Kecamatan (from dropdown)
     if (districtSelect.value) {
-        lines.push(districtSelect.value);
+        lines.push(`Kecamatan ${districtSelect.value}`);
     }
 
-    // Village/Desa (from dropdown)
+    // Village/Desa or Kelurahan (from dropdown)
     if (villageSelect.value) {
-        lines.push(villageSelect.value);
+        // List of Kelurahan (the rest are Desa)
+        const kelurahanList = ['Kota Pagatan', 'Kampung Baru', 'Tungkaran Pangeran'];
+        const isKelurahan = kelurahanList.includes(villageSelect.value);
+        const prefix = isKelurahan ? 'Kelurahan' : 'Desa';
+        lines.push(`${prefix} ${villageSelect.value}`);
     }
 
 
@@ -897,3 +998,336 @@ function downloadPhoto() {
     link.href = resultCanvas.toDataURL('image/jpeg', 0.95);
     link.click();
 }
+
+// ===== GPS Map Camera Style Functions =====
+
+// Draw Satellite Map using Esri World Imagery
+async function drawSatelliteMap(ctx, canvas, scale) {
+    const padding = 20 * scale;
+    const mapSize = 200 * scale;
+    const x = padding;
+    const y = canvas.height - mapSize - padding;
+
+    const lat = selectedLocation.lat;
+    const lng = selectedLocation.lng;
+
+    // Try satellite map with zoom 18
+    let success = await tryDrawSatelliteTiles(ctx, x, y, mapSize, mapSize, lat, lng, 18, scale);
+
+    if (!success) {
+        // Fallback to zoom 17
+        success = await tryDrawSatelliteTiles(ctx, x, y, mapSize, mapSize, lat, lng, 17, scale);
+    }
+
+    if (!success) {
+        // Draw fallback
+        drawFallbackSatellite(ctx, x, y, mapSize, mapSize, scale);
+    }
+}
+
+// Try to draw satellite tiles from Esri
+async function tryDrawSatelliteTiles(ctx, x, y, mapWidth, mapHeight, lat, lng, zoom, scale) {
+    try {
+        const mapCanvas = document.createElement('canvas');
+        mapCanvas.width = Math.round(mapWidth);
+        mapCanvas.height = Math.round(mapHeight);
+        const mapCtx = mapCanvas.getContext('2d');
+
+        // Use scaled tile size to maintain consistent zoom level appearance
+        const baseTileSize = 256;
+        const tileSize = baseTileSize * scale * 0.5;  // Reduced zoom (0.4x)
+        const exactTileX = lonToTile(lng, zoom);
+        const exactTileY = latToTile(lat, zoom);
+        const centerTileX = Math.floor(exactTileX);
+        const centerTileY = Math.floor(exactTileY);
+        const offsetX = (exactTileX - centerTileX) * tileSize;
+        const offsetY = (exactTileY - centerTileY) * tileSize;
+        const centerTilePosX = mapWidth / 2 - offsetX;
+        const centerTilePosY = mapHeight / 2 - offsetY;
+
+        const tilesLeft = Math.ceil(centerTilePosX / tileSize) + 1;
+        const tilesRight = Math.ceil((mapWidth - centerTilePosX) / tileSize) + 1;
+        const tilesTop = Math.ceil(centerTilePosY / tileSize) + 1;
+        const tilesBottom = Math.ceil((mapHeight - centerTilePosY) / tileSize) + 1;
+
+        let failedTiles = 0;
+        let totalTiles = 0;
+        const tilePromises = [];
+
+        for (let ty = -tilesTop; ty < tilesBottom; ty++) {
+            for (let tx = -tilesLeft; tx < tilesRight; tx++) {
+                const tileX = centerTileX + tx;
+                const tileY = centerTileY + ty;
+                const posX = centerTilePosX + tx * tileSize;
+                const posY = centerTilePosY + ty * tileSize;
+
+                if (posX + tileSize < 0 || posX > mapWidth || posY + tileSize < 0 || posY > mapHeight) {
+                    continue;
+                }
+
+                totalTiles++;
+
+                // Use Esri World Imagery (free satellite tiles)
+                const tileUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${tileY}/${tileX}`;
+
+                tilePromises.push(
+                    loadTileImage(tileUrl).then(img => {
+                        mapCtx.drawImage(img, posX, posY, tileSize, tileSize);
+                    }).catch(() => {
+                        failedTiles++;
+                        mapCtx.fillStyle = '#2d5a27';
+                        mapCtx.fillRect(posX, posY, tileSize, tileSize);
+                    })
+                );
+            }
+        }
+
+        await Promise.all(tilePromises);
+
+        if (failedTiles > totalTiles * 0.5) {
+            return false;
+        }
+
+        // Draw red marker
+        drawMapMarker(mapCtx, mapWidth / 2, mapHeight / 2, scale);
+
+        // Draw "Google" text in bottom left corner (similar to reference)
+        mapCtx.save();
+        mapCtx.font = `bold ${18 * scale}px Arial`;  // +30% (was 14)
+        mapCtx.fillStyle = 'white';
+        mapCtx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        mapCtx.shadowBlur = 2;
+        mapCtx.fillText('Google', 8 * scale, mapHeight - 8 * scale);
+        mapCtx.restore();
+
+        // Draw the map onto main canvas with rounded corners
+        ctx.save();
+        ctx.globalAlpha = 0.95;
+        roundedRect(ctx, x, y, mapWidth, mapHeight, 8 * scale);
+        ctx.clip();
+        ctx.drawImage(mapCanvas, x, y);
+        ctx.restore();
+
+        // Border
+        ctx.save();
+        roundedRect(ctx, x, y, mapWidth, mapHeight, 8 * scale);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 2 * scale;
+        ctx.stroke();
+        ctx.restore();
+
+        return true;
+    } catch (error) {
+        console.error('Failed to load satellite map:', error);
+        return false;
+    }
+}
+
+// Fallback for satellite map
+function drawFallbackSatellite(ctx, x, y, width, height, scale) {
+    ctx.save();
+    roundedRect(ctx, x, y, width, height, 8 * scale);
+    ctx.fillStyle = '#2d5a27';
+    ctx.fill();
+
+    // Draw simple grid
+    ctx.strokeStyle = 'rgba(0, 100, 0, 0.5)';
+    ctx.lineWidth = 1;
+    const gridSize = 15 * scale;
+    for (let gx = x; gx < x + width; gx += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(gx, y);
+        ctx.lineTo(gx, y + height);
+        ctx.stroke();
+    }
+    for (let gy = y; gy < y + height; gy += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, gy);
+        ctx.lineTo(x + width, gy);
+        ctx.stroke();
+    }
+
+    drawMapMarker(ctx, x + width / 2, y + height / 2 + 10 * scale, scale);
+
+    ctx.restore();
+}
+
+// Draw GPS Info Box (dark info box on the right) - matches reference layout
+function drawGPSInfoBox(ctx, canvas, scale, randomData) {
+    const padding = 20 * scale;
+
+    // Map dimensions (already drawn by drawSatelliteMap)
+    const mapSize = 200 * scale;
+
+    // Info box positioned to the right of the map (increased gap)
+    const infoBoxX = padding + mapSize + 20 * scale;  // Was 10
+    const infoBoxWidth = canvas.width - infoBoxX - padding;
+    const infoBoxHeight = mapSize; // Same height as map
+    const infoBoxY = canvas.height - mapSize - padding;
+    const cornerRadius = 12 * scale;
+
+    // Badge dimensions (+20% size)
+    const brandWidth = 204 * scale;   // Was 170
+    const brandHeight = 36 * scale;   // Was 30
+    const brandX = infoBoxX + infoBoxWidth - brandWidth;
+    const brandY = infoBoxY - brandHeight + 0.1 * scale;  // Tiny overlap to eliminate seam
+
+    // Draw main info box with NO rounded corner on top-right (to merge with badge)
+    ctx.save();
+    ctx.fillStyle = 'rgba(50, 50, 50, 0.88)';
+    roundedRectSelective(ctx, infoBoxX, infoBoxY, infoBoxWidth, infoBoxHeight, cornerRadius, {
+        tl: true,   // top-left: rounded
+        tr: false,  // top-right: square (merges with badge)
+        br: true,   // bottom-right: rounded
+        bl: true    // bottom-left: rounded
+    });
+    ctx.fill();
+
+    // Draw "GPS Map Camera" badge with NO rounded corners on bottom (fully merges with box)
+    ctx.fillStyle = 'rgba(50, 50, 50, 0.88)';  // Same as main info box
+    roundedRectSelective(ctx, brandX, brandY, brandWidth, brandHeight, 8 * scale, {
+        tl: true,   // top-left: rounded
+        tr: true,   // top-right: rounded
+        br: false,  // bottom-right: square (merges with box)
+        bl: false   // bottom-left: square (merges with box)
+    });
+    ctx.fill();
+
+    // Draw GPS Map Camera logo (logo_stamped.png) - +20% size
+    const logoSize = 22 * scale;  // Was 18
+    const logoX = brandX + 12 * scale;
+    const logoY = brandY + (brandHeight - logoSize) / 2;
+
+    // Try to draw the logo image
+    if (gpsLogoImage && gpsLogoImage.complete) {
+        ctx.drawImage(gpsLogoImage, logoX, logoY, logoSize, logoSize);
+    }
+
+    // Draw text next to logo - +20% size
+    ctx.font = `${17 * scale}px Arial`;  // Was 14
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('GPS Map Camera', logoX + logoSize + 10 * scale, brandY + brandHeight / 2);
+
+    // Text content inside info box
+    const textX = infoBoxX + 18 * scale;
+    const textMaxWidth = infoBoxWidth - 36 * scale;
+    let textY = infoBoxY + 18 * scale;  // Moved up slightly more
+    const titleLineHeight = 28 * scale;  // Adjusted for larger font
+    const bodyLineHeight = 22 * scale;   // Adjusted for larger font
+    const titleFontSize = 24 * scale;    // +10% (was 22)
+    const bodyFontSize = 18 * scale;     // +10% (was 16)
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    // Line 1: Main location title (bold white) - with text wrapping
+    ctx.font = `bold ${titleFontSize}px Arial`;
+    ctx.fillStyle = 'white';
+
+    let titleLine1 = '';
+    if (districtSelect.value) {
+        titleLine1 = `Kecamatan ${districtSelect.value}, Kalimantan`;
+    } else {
+        titleLine1 = 'Kalimantan';
+    }
+
+    // Wrap title if too long
+    const wrappedTitle = wrapText(ctx, titleLine1, textMaxWidth);
+    for (const line of wrappedTitle) {
+        ctx.fillText(line, textX, textY);
+        textY += titleLineHeight;
+    }
+
+    // Line 2: Second part of title with flag
+    let titleLine2 = 'Selatan, Indonesia';
+    ctx.fillText(titleLine2, textX, textY);
+
+    // Draw Indonesia flag image (+20% size, closer to text)
+    const flagX = textX + ctx.measureText(titleLine2).width + 6 * scale;  // Closer (was 12)
+    const flagWidth = 47 * scale;   // +15% more (was 41)
+    const flagHeight = 32 * scale;  // +15% more (was 28)
+    const flagY = textY + (titleFontSize - flagHeight) / 2;
+
+    if (indonesiaFlagImage && indonesiaFlagImage.complete) {
+        ctx.drawImage(indonesiaFlagImage, flagX, flagY, flagWidth, flagHeight);
+    }
+    textY += titleLineHeight + 6 * scale;
+
+    // Address lines (smaller, white) - with text wrapping
+    ctx.font = `${bodyFontSize}px Arial`;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+
+    // Build full address text
+    const plusCode = generatePlusCode(selectedLocation.lat, selectedLocation.lng);
+    let fullAddress = plusCode;
+    if (roadInput.value.trim()) {
+        fullAddress += `, ${roadInput.value.trim()}`;
+    }
+    if (villageSelect.value) {
+        fullAddress += `, ${villageSelect.value}`;
+    }
+    if (districtSelect.value) {
+        fullAddress += `, Kec. ${districtSelect.value}, Kabupaten Tanah Bumbu, Kalimantan Selatan 72273, Indonesia`;
+    }
+
+    // Wrap and draw address
+    const wrappedAddress = wrapText(ctx, fullAddress, textMaxWidth);
+    for (const line of wrappedAddress) {
+        ctx.fillText(line, textX, textY);
+        textY += bodyLineHeight;
+    }
+
+    // Coordinates
+    if (selectedLocation) {
+        const coordsText = `Lat ${selectedLocation.lat.toFixed(6)}° Long ${selectedLocation.lng.toFixed(6)}°`;
+        ctx.fillText(coordsText, textX, textY);
+        textY += bodyLineHeight;
+    }
+
+    // Date and Time with timezone
+    const dateStr = formatDateGPS(dateInput.value);
+    const timeStr = formatTimeGPS(timeInput.value);
+    const dateTimeText = `${dateStr} ${timeStr} GMT +08:00`;
+    ctx.fillText(dateTimeText, textX, textY);
+
+    ctx.restore();
+}
+
+// Generate fake Plus Code (for display purposes)
+function generatePlusCode(lat, lng) {
+    const chars = '23456789CFGHJMPQRVWX';
+    let code = '';
+    for (let i = 0; i < 4; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    code += '+';
+    for (let i = 0; i < 3; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code.toLowerCase();
+}
+
+// Format date for GPS style (Sabtu, 07/02/2026)
+function formatDateGPS(dateString) {
+    const date = new Date(dateString);
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const dayName = days[date.getDay()];
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    return `${dayName}, ${day}/${month}/${year}`;
+}
+
+// Format time for GPS style (01:38 PM)
+function formatTimeGPS(timeString) {
+    const [hours, minutes] = timeString.split(':');
+    let hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12;
+    if (hour === 0) hour = 12;
+    return `${String(hour).padStart(2, '0')}:${minutes} ${ampm}`;
+}
+
