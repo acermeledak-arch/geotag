@@ -77,22 +77,22 @@ function initPassword() {
     const passwordError = document.getElementById('passwordError');
 
     // Generate today's password (GMT+8 timezone)
+    // Password = tanggal + bulan + tahun (penjumlahan kalender)
     function getTodayPassword() {
         // Get current time in GMT+8
         const now = new Date();
         const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
         const gmt8 = new Date(utc + (8 * 60 * 60000)); // GMT+8
 
-        const day = String(gmt8.getDate()).padStart(2, '0');
-        const month = String(gmt8.getMonth() + 1).padStart(2, '0');
-        const year = String(gmt8.getFullYear()).slice(-2);
+        const day = gmt8.getDate();
+        const month = gmt8.getMonth() + 1;
+        const year = gmt8.getFullYear();
 
-        // If date is odd: YYMMDD, if even: DDMMYY
-        if (gmt8.getDate() % 2 === 1) {
-            return year + month + day; // Odd: YYMMDD
+        // Genap: day + month + year, Ganjil: year - month - day
+        if (day % 2 === 0) {
+            return String(day + month + year);
         } else {
-
-            return day + month + year; // Even: DDMMYY
+            return String(year - month - day);
         }
     }
 
