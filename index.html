@@ -31,6 +31,34 @@
         </div>
     </div>
 
+    <!-- Name Input Screen -->
+    <div class="name-screen" id="nameScreen">
+        <div class="name-content">
+            <img src="logo_preloader.png" alt="PAGPIC EDUTECH" class="name-logo">
+            <h2>👤 Masukkan Nama</h2>
+            <p class="name-hint">Masukkan nama Anda untuk melanjutkan</p>
+            <input type="text" id="nameInput" class="name-input" placeholder="Nama Lengkap" autocomplete="off">
+            <div class="name-buttons">
+                <button class="name-btn name-btn-history" id="btnShowHistory">📋 Lihat Riwayat</button>
+                <button class="name-btn name-btn-continue" id="btnContinue">➡️ Lanjutkan</button>
+            </div>
+            <p class="name-error" id="nameError"></p>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="history-overlay" id="historyOverlay">
+        <div class="history-modal">
+            <div class="history-header">
+                <h2>📋 Riwayat Penggunaan</h2>
+                <button class="history-close" id="historyClose">✕</button>
+            </div>
+            <div class="history-body" id="historyBody">
+                <p class="history-loading">Memuat riwayat...</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Style Selection Screen -->
     <div class="style-selection" id="styleSelection">
         <div class="style-selection-content">
@@ -169,6 +197,7 @@
 
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>

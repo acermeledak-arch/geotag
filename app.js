@@ -1,3 +1,8 @@
+// ===== Supabase Init =====
+const SUPABASE_URL = 'https://xybqetoutxmrpzrreyuf.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5YnFldG91dHhtcnB6cnJleXVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5MjMxNzIsImV4cCI6MjA4NzQ5OTE3Mn0.EmWmOTDEUdP_3sZ9pvYNRNyE2rCOmLfO3kZHExkjzXg';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ===== Global Variables =====
 let map;
 let marker;
@@ -7,6 +12,7 @@ let logoImage = null; // Preloaded logo for original style
 let gpsLogoImage = null; // Preloaded logo for GPS Map Camera style
 let indonesiaFlagImage = null; // Indonesia flag SVG
 let selectedStyle = 'original'; // 'original' or 'gps-camera'
+let currentUserName = ''; // Current logged-in user name
 
 // ===== Location Data (Tanah Bumbu) =====
 const locationData = {
@@ -47,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDateTime();
     initLocationDropdowns();
     initLightbox();
-    initPassword();
+    initNameInput();
     initStyleSelection();
     initButtons();
     hidePreloader();
@@ -58,71 +64,227 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== Preloader =====
 function hidePreloader() {
     const preloader = document.getElementById('preloader');
-    const passwordScreen = document.getElementById('passwordScreen');
 
     // Minimum display time for smooth effect
     setTimeout(() => {
         preloader.classList.add('hidden');
-        // Show password screen after preloader
-        passwordScreen.classList.add('active');
-        document.getElementById('passwordInput').focus();
+        // Show name input screen directly
+        document.getElementById('nameScreen').classList.add('active');
+        document.getElementById('nameInput').focus();
     }, 1500);
 }
 
-// ===== Password Protection =====
-function initPassword() {
-    const passwordScreen = document.getElementById('passwordScreen');
-    const passwordInput = document.getElementById('passwordInput');
-    const passwordSubmit = document.getElementById('passwordSubmit');
-    const passwordError = document.getElementById('passwordError');
 
-    // Generate today's password (GMT+8 timezone)
-    // Password = tanggal + bulan + tahun (penjumlahan kalender)
-    function getTodayPassword() {
-        // Get current time in GMT+8
-        const now = new Date();
-        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-        const gmt8 = new Date(utc + (8 * 60 * 60000)); // GMT+8
 
-        const day = gmt8.getDate();
-        const month = gmt8.getMonth() + 1;
-        const year = gmt8.getFullYear();
 
-        // Genap: day + month + year, Ganjil: year - month - day
-        if (day % 2 === 0) {
-            return String(day + month + year);
-        } else {
-            return String(year - month - day);
+// ===== Name Input =====
+function initNameInput() {
+    const nameScreen = document.getElementById('nameScreen');
+    const nameInput = document.getElementById('nameInput');
+    const nameError = document.getElementById('nameError');
+    const btnContinue = document.getElementById('btnContinue');
+    const btnShowHistory = document.getElementById('btnShowHistory');
+
+    function proceed() {
+        const name = nameInput.value.trim();
+        if (!name || name.length < 6) {
+            nameError.textContent = '❌ Nama tidak ditemukan';
+            nameInput.focus();
+            return;
         }
+        currentUserName = name;
+        nameError.textContent = '';
+        nameScreen.classList.remove('active');
+        document.getElementById('styleSelection').classList.add('active');
     }
 
-    function validatePassword() {
-        const entered = passwordInput.value;
-        const correct = getTodayPassword();
+    btnContinue.addEventListener('click', proceed);
+    nameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') proceed();
+    });
 
-        if (entered === correct) {
-            passwordScreen.classList.remove('active');
-            passwordError.textContent = '';
-            // Show style selection instead of main app
-            document.getElementById('styleSelection').classList.add('active');
-        } else {
-            passwordError.textContent = '❌ Password salah!';
-            passwordInput.classList.add('error');
-            setTimeout(() => passwordInput.classList.remove('error'), 300);
-            passwordInput.value = '';
-            passwordInput.focus();
-        }
-    }
+    btnShowHistory.addEventListener('click', () => {
+        showHistoryModal();
+    });
 
-    // Submit on button click
-    passwordSubmit.addEventListener('click', validatePassword);
-
-    // Submit on Enter key
-    passwordInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            validatePassword();
+    // History modal close
+    document.getElementById('historyClose').addEventListener('click', () => {
+        document.getElementById('historyOverlay').classList.remove('active');
+    });
+    document.getElementById('historyOverlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            document.getElementById('historyOverlay').classList.remove('active');
         }
     });
+}
+
+// ===== History Modal =====
+async function showHistoryModal() {
+    const overlay = document.getElementById('historyOverlay');
+    const body = document.getElementById('historyBody');
+
+    overlay.classList.add('active');
+    body.innerHTML = '<p class="history-loading">⏳ Memuat riwayat...</p>';
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('usage_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            body.innerHTML = '<div class="history-empty"><span>📭</span>Belum ada riwayat penggunaan</div>';
+            return;
+        }
+
+        let html = `<table class="history-table">
+            <thead><tr>
+                <th>Nama</th>
+                <th>Waktu</th>
+                <th>Foto</th>
+                <th></th>
+            </tr></thead><tbody>`;
+
+        data.forEach((row, idx) => {
+            const date = new Date(row.created_at);
+            const timeStr = date.toLocaleDateString('id-ID', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+
+            const photoUrls = row.photo_urls || [];
+            const photosHtml = photoUrls.map(url => {
+                const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/stamped-photos/${url}`;
+                return `<img src="${publicUrl}" alt="Stamped" loading="lazy" onclick="openHistoryPhoto('${publicUrl}')">`;
+            }).join('');
+
+            html += `<tr>
+                <td class="user-name">${row.user_name}</td>
+                <td>${timeStr}</td>
+                <td><span class="photo-count">📸 ${row.photo_count} foto</span></td>
+                <td>
+                    ${photoUrls.length > 0 ? `<button class="history-photos-toggle" onclick="showPhotoPopup('${row.user_name}', ${idx})">👁 Lihat</button>` : '-'}
+                </td>
+            </tr>`;
+        });
+
+        // Store photo data globally for popup use
+        window._historyPhotos = data.map(row => (row.photo_urls || []).map(url =>
+            `${SUPABASE_URL}/storage/v1/object/public/stamped-photos/${url}`
+        ));
+
+
+        html += '</tbody></table>';
+        body.innerHTML = html;
+
+    } catch (err) {
+        console.error('Failed to load history:', err);
+        body.innerHTML = '<div class="history-empty"><span>⚠️</span>Gagal memuat riwayat.<br>Pastikan tabel dan bucket sudah dibuat di Supabase.</div>';
+    }
+}
+
+function showPhotoPopup(userName, idx) {
+    const urls = (window._historyPhotos && window._historyPhotos[idx]) || [];
+    if (urls.length === 0) return;
+
+    let currentPhotoIdx = 0;
+    let zoomLevel = 1;
+
+    const popup = document.createElement('div');
+    popup.className = 'photo-popup-overlay';
+
+    function render() {
+        const url = urls[currentPhotoIdx];
+        const navLeft = urls.length > 1 ? `<button class="photo-nav photo-nav-left" id="ppNavLeft">❮</button>` : '';
+        const navRight = urls.length > 1 ? `<button class="photo-nav photo-nav-right" id="ppNavRight">❯</button>` : '';
+        const counter = urls.length > 1 ? `<span class="photo-counter">${currentPhotoIdx + 1} / ${urls.length}</span>` : '';
+
+        popup.innerHTML = `
+            <div class="photo-popup" id="photoPopupBox">
+                <button class="photo-popup-close" id="ppClose">✕</button>
+                ${counter}
+                <div class="photo-popup-viewer" id="ppViewer">
+                    <img src="${url}" alt="Stamped" id="ppImage" draggable="false">
+                </div>
+                ${navLeft}
+                ${navRight}
+            </div>
+        `;
+
+        // Wait for image to load to adapt popup orientation
+        const img = popup.querySelector('#ppImage');
+        const box = popup.querySelector('#photoPopupBox');
+
+        img.onload = () => {
+            zoomLevel = 1;
+            img.style.transform = `scale(1)`;
+            if (img.naturalWidth > img.naturalHeight) {
+                box.classList.remove('portrait');
+                box.classList.add('landscape');
+            } else {
+                box.classList.remove('landscape');
+                box.classList.add('portrait');
+            }
+        };
+
+        // Close
+        popup.querySelector('#ppClose').addEventListener('click', () => popup.remove());
+
+        // Nav
+        if (urls.length > 1) {
+            popup.querySelector('#ppNavLeft').addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentPhotoIdx = (currentPhotoIdx - 1 + urls.length) % urls.length;
+                render();
+            });
+            popup.querySelector('#ppNavRight').addEventListener('click', (e) => {
+                e.stopPropagation();
+                currentPhotoIdx = (currentPhotoIdx + 1) % urls.length;
+                render();
+            });
+        }
+
+        // Zoom with scroll wheel
+        const viewer = popup.querySelector('#ppViewer');
+        viewer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (e.deltaY < 0) {
+                zoomLevel = Math.min(zoomLevel + 0.2, 5);
+            } else {
+                zoomLevel = Math.max(zoomLevel - 0.2, 0.5);
+            }
+            img.style.transform = `scale(${zoomLevel})`;
+        });
+    }
+
+    popup.addEventListener('click', (e) => {
+        if (e.target === popup) popup.remove();
+    });
+
+    // Keyboard nav
+    const keyHandler = (e) => {
+        if (!document.body.contains(popup)) {
+            document.removeEventListener('keydown', keyHandler);
+            return;
+        }
+        if (e.key === 'Escape') popup.remove();
+        if (e.key === 'ArrowLeft' && urls.length > 1) { currentPhotoIdx = (currentPhotoIdx - 1 + urls.length) % urls.length; render(); }
+        if (e.key === 'ArrowRight' && urls.length > 1) { currentPhotoIdx = (currentPhotoIdx + 1) % urls.length; render(); }
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    document.body.appendChild(popup);
+    render();
+}
+
+function openHistoryPhoto(url) {
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImage = document.getElementById('lightboxImage');
+    lightboxImage.src = url;
+    lightbox.classList.add('active');
 }
 
 // ===== Style Selection =====
@@ -134,7 +296,6 @@ function initStyleSelection() {
         card.addEventListener('click', () => {
             selectedStyle = card.dataset.style;
             styleSelection.classList.remove('active');
-            // Road input is now always enabled for all styles
         });
     });
 }
@@ -386,16 +547,64 @@ async function generateAllStampedPhotos() {
     // Clear previous results
     resultsGrid.innerHTML = '';
 
+    // Collect canvases for Supabase upload
+    const stampedCanvases = [];
+
     // Process each image
     for (let i = 0; i < uploadedImages.length; i++) {
         const item = uploadedImages[i];
         await generateSingleStamp(item, i);
     }
 
+    // Collect all canvases from results grid
+    const canvasElements = resultsGrid.querySelectorAll('canvas');
+
     // Update count and show results
     resultCount.textContent = uploadedImages.length;
     resultSection.classList.add('visible');
     resultSection.scrollIntoView({ behavior: 'smooth' });
+
+    generateBtn.textContent = '📤 Menyimpan riwayat...';
+
+    // Upload compressed photos to Supabase in background
+    try {
+        const photoUrls = [];
+        const timestamp = Date.now();
+        const safeName = currentUserName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+
+        for (let i = 0; i < canvasElements.length; i++) {
+            const canvas = canvasElements[i];
+            // Compress to small JPEG (quality 0.3 for storage efficiency)
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.3));
+            if (!blob) continue;
+
+            const filePath = `${safeName}_${timestamp}_${i}.jpg`;
+
+            const { data, error } = await supabaseClient.storage
+                .from('stamped-photos')
+                .upload(filePath, blob, {
+                    contentType: 'image/jpeg',
+                    upsert: false
+                });
+
+            if (!error && data) {
+                photoUrls.push(filePath);
+            } else {
+                console.warn('Upload photo failed:', error);
+            }
+        }
+
+        // Insert usage log
+        await supabaseClient.from('usage_logs').insert({
+            user_name: currentUserName,
+            photo_count: canvasElements.length,
+            photo_urls: photoUrls
+        });
+
+        console.log('Usage log saved successfully');
+    } catch (err) {
+        console.error('Failed to save usage log:', err);
+    }
 
     generateBtn.textContent = '🖼️ Generate Stamp';
     generateBtn.disabled = false;
